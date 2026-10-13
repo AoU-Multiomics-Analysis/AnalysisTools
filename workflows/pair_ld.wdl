@@ -1,6 +1,6 @@
 version 1.0
 
-# Calculate unphased dosage r2 for the full cohort and each population.
+# Calculate unphased dosage r2 in one batch for the full cohort and each population.
 workflow PairLDByPopulation {
     input {
         File pgen
@@ -62,7 +62,7 @@ task CalculatePairLD {
 
     command <<<
         set -euo pipefail
-        echo "[PairLD] Start input checks and population LD calculation"
+        echo "[PairLD] Start input checks and batched population LD calculation"
         python /opt/pair_ld/pair_ld.py \
             --pgen '~{sub(pgen, "'", "'\"'\"'")}' \
             --pvar '~{sub(pvar, "'", "'\"'\"'")}' \

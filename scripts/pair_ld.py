@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Calculate unphased dosage r2 for requested pairs and sample groups."""
+"""Calculate requested dosage r2 pairs in one PLINK batch per sample group."""
 import argparse
 import csv
 import gzip
@@ -169,9 +169,21 @@ def main():
         if pgi:
             inputs += ["--pgi", pgi]
         run_plink(args.plink, inputs + ["--extract", extract, "--make-pgen", "--out", work / "subset"] + resources)
-    anchors = {}
-    for a, b in sorted(eligible):
-        anchors.setdefault(a, []).append(b)
+        anchors = work / "anchors.txt"
+        anchors.write_text("".join(a + "\n" for a in sorted({a for a, b in pairs if tuple(sorted((a, b))) in eligible})))
+        cross_chromosome = any(variants[a]["CHROM"].removeprefix("chr") != variants[b]["CHROM"].removeprefix("chr")
+                               for a, b in eligible)
+        ld_arguments = ["--r2-unphased"]
+        if cross_chromosome:
+            # PLINK forbids a distance filter with inter-chr. Keep all pairs,
+            # including distant same-chromosome pairs in a mixed request.
+            ld_arguments += ["inter-chr", "cols=chrom,pos,id"]
+            LOG.info("Batch includes cross-chromosome pairs; no distance filter")
+        else:
+            max_distance = max(abs(int(variants[a]["POS"]) - int(variants[b]["POS"])) for a, b in eligible)
+            window_kb = max(1, (max_distance + 999) // 1000)
+            ld_arguments += ["cols=chrom,pos,id", "--ld-window-kb", window_kb]
+            LOG.info("Batch distance limit: %s kb for %s requested pairs", window_kb, len(eligible))
     fields = ["pair_index", "variant_a", "variant_b", "population", "n_samples", "r2", "status", "small_group"]
     with (output / "ld.tsv").open("w") as stream, (output / "sample_counts.tsv").open("w") as counts:
         writer = csv.DictWriter(stream, fieldnames=fields, delimiter="\t", lineterminator="\n")
@@ -187,17 +199,22 @@ def main():
             if enabled and eligible:
                 keep = work / f"group_{group_index}.keep"
                 keep.write_text("#FID\tIID\n" + "".join(f"{fid}\t{iid}\n" for fid, iid in samples))
-                for anchor_index, (anchor, partners) in enumerate(anchors.items()):
-                    extract = work / f"anchor_{anchor_index}.txt"
-                    extract.write_text("\n".join([anchor, *partners]) + "\n")
-                    prefix = work / f"group_{group_index}_anchor_{anchor_index}"
-                    arguments = ["--pfile", work / "subset", "--keep", keep, "--extract", extract, "--r2-unphased", "inter-chr", "cols=chrom,pos,id", "--ld-snp", anchor, "--ld-window-r2", "-1", "--out", prefix] + resources
-                    if args.allow_small_groups and n < 50:
-                        arguments.append("--bad-ld")
-                    run_plink(args.plink, arguments)
-                    with prefix.with_suffix(".vcor").open() as report:
-                        for row in csv.DictReader(report, delimiter="\t"):
-                            values[tuple(sorted((row["ID_A"], row["ID_B"])))] = float(row["UNPHASED_R2"])
+                prefix = work / f"group_{group_index}_ld"
+                arguments = ["--pfile", work / "subset", "--keep", keep, *ld_arguments,
+                             "--ld-snp-list", anchors, "--ld-window-r2", "-1", "--out", prefix] + resources
+                if args.allow_small_groups and n < 50:
+                    arguments.append("--bad-ld")
+                LOG.info("Run one LD batch for population %s", label)
+                run_plink(args.plink, arguments)
+                report_path = prefix.with_suffix(".vcor")
+                with report_path.open() as report:
+                    for row in csv.DictReader(report, delimiter="\t"):
+                        key = tuple(sorted((row["ID_A"], row["ID_B"])))
+                        if key in eligible:
+                            values[key] = float(row["UNPHASED_R2"])
+                # The LD report is a task-local intermediate, not an output.
+                # Keep at most one population's report on disk; export logs.
+                report_path.unlink()
             for index, (a, b) in enumerate(pairs, 1):
                 status = pair_status(a, b, variants)
                 value = "NA"
