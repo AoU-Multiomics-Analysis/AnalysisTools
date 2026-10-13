@@ -80,7 +80,7 @@ The workflow also returns sample counts, the PLINK version, PLINK logs, and task
 
 ## Terra use
 
-1. Use the published image `ghcr.io/aou-multiomics-analysis/plink-pair-ld`, preferably with its exact digest.
+1. Use the published image from `examples/inputs.json`. That example pins the exact tested image by digest.
 2. Upload the genotype files and the two TSV files to your workspace bucket.
 3. Add the WDL as a Terra method.
 4. Set the inputs with `examples/inputs.json` as a guide. Replace every example path and image name.
@@ -116,7 +116,9 @@ After the checks pass on `main`, the action publishes the tested image to GitHub
 It publishes a `latest` tag and a `sha-<full commit SHA>` tag. Pull requests run the checks without publishing.
 Use the digest from the action summary as the WDL `docker_image` input to select the exact tested image.
 The action uses the repository's `GITHUB_TOKEN`; no separate registry secret is required.
-New GHCR packages start as private. Set the package visibility to public to permit Terra to pull the image without credentials.
+The [published LD image](https://github.com/orgs/AoU-Multiomics-Analysis/packages/container/package/plink-pair-ld) is public.
+Anonymous manifest access was verified for the digest in `examples/inputs.json`.
+Terra can pull this image without registry credentials.
 No local container build is needed for these checks.
 
 Run the checks directly when PLINK 2 and miniwdl are available:
@@ -128,6 +130,7 @@ python -m unittest discover -s tests -v
 ```
 
 Local checks passed with PLINK `2.0.0-a.6.9` and miniwdl `1.14.2`.
+The [GitHub Actions image build](https://github.com/AoU-Multiomics-Analysis/AnalysisTools/actions/runs/38342246710) also passed all three small tests and published the container.
 
 ## References
 

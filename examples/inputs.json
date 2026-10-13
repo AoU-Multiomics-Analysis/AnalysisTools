@@ -4,7 +4,7 @@
   "PairLDByPopulation.psam": "gs://YOUR_BUCKET/cohort.psam",
   "PairLDByPopulation.variant_pairs": "gs://YOUR_BUCKET/variant_pairs.tsv",
   "PairLDByPopulation.sample_populations": "gs://YOUR_BUCKET/sample_populations.tsv",
-  "PairLDByPopulation.docker_image": "ghcr.io/aou-multiomics-analysis/plink-pair-ld:latest",
+  "PairLDByPopulation.docker_image": "ghcr.io/aou-multiomics-analysis/plink-pair-ld@sha256:80418d0bb4256e8f8a9d3f33932ecebf66b7a1eeff2d8322a81510721596bbb7",
   "PairLDByPopulation.cpu": 2,
   "PairLDByPopulation.memory_gb": 8,
   "PairLDByPopulation.extra_disk_gb": 10,
