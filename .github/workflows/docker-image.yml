@@ -1,44 +1,50 @@
 name: Docker Image CI
-
 on:
-  workflow_dispatch:
+  pull_request:
+    paths: ['scripts/pair_ld.py']
   push:
-    branches: [ "main" ]
-    paths:
-      - ".github/workflows/docker-image.yml"
-      - "envs/Dockerfile"
-      - "scripts/**"
-
-
+    branches: ['main']
+    paths: ['scripts/pair_ld.py']
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  build_and_push:
+  smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       packages: write
-
     steps:
-      - name: Checkout the code
-        uses: actions/checkout@v7
-
-      - name: Log in to ghcr.io with docker
-        uses: docker/login-action@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build Linux image
+        run: |
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -f envs/Dockerfile -t pair-ld:test .
+      - name: Check tiny dosage example and input errors
+        run: |
+          docker run --rm --entrypoint /bin/bash \
+            --mount type=bind,src="$PWD",dst=/project,readonly \
+            --workdir /tmp \
+            --env PAIR_LD_SCRIPT=/opt/pair_ld/pair_ld.py \
+            pair-ld:test \
+            -c 'python -m unittest discover -s /project/tests -p test_pair_ld.py -v'
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
-          username: ${{github.repository_owner}}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository }}
-
-      - name: Build and push docker containers
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: ./envs/Dockerfile
-          push: False 
-          tags: |
-            ${{ steps.meta.outputs.tags }}
+      - name: Publish tested image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/plink-pair-ld"
+          docker tag pair-ld:test "$image:sha-$GITHUB_SHA"
+          docker tag pair-ld:test "$image:latest"
+          docker push "$image:sha-$GITHUB_SHA"
+          docker push "$image:latest"
+          digest=$(docker image inspect "$image:sha-$GITHUB_SHA" --format '{{index .RepoDigests 0}}')
+          printf 'Published container: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"

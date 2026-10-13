@@ -1,0 +1,12 @@
+{
+  "PairLDByPopulation.pgen": "gs://YOUR_BUCKET/cohort.pgen",
+  "PairLDByPopulation.pvar": "gs://YOUR_BUCKET/cohort.pvar",
+  "PairLDByPopulation.psam": "gs://YOUR_BUCKET/cohort.psam",
+  "PairLDByPopulation.variant_pairs": "gs://YOUR_BUCKET/variant_pairs.tsv",
+  "PairLDByPopulation.sample_populations": "gs://YOUR_BUCKET/sample_populations.tsv",
+  "PairLDByPopulation.docker_image": "ghcr.io/aou-multiomics-analysis/plink-pair-ld:latest",
+  "PairLDByPopulation.cpu": 2,
+  "PairLDByPopulation.memory_gb": 8,
+  "PairLDByPopulation.extra_disk_gb": 10,
+  "PairLDByPopulation.allow_small_groups": false
+}

@@ -1,0 +1,5 @@
+*
+!envs/
+!envs/Dockerfile
+!scripts/
+!scripts/pair_ld.py
