@@ -23,7 +23,7 @@ jobs:
             --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             -f envs/Dockerfile -t pair-ld:test .
-      - name: Check tiny dosage example and input errors
+      - name: Check batched LD against per-anchor results and input errors
         run: |
           docker run --rm --entrypoint /bin/bash \
             --mount type=bind,src="$PWD",dst=/project,readonly \

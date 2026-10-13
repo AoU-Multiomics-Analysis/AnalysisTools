@@ -41,10 +41,21 @@ Variants on different autosomes are allowed; their r² measures cross-chromosome
 
 ## Calculation
 
-One task selects the requested variants into a small PGEN dataset.
-This step preserves dosages. For each group, PLINK calculates only pairs that share a requested anchor variant.
-The script selects the requested pairs from these reports.
-It disables PLINK's default distance and r² filters, so distant pairs and low r² values remain in the output.
+One task selects all eligible requested variants into a small PGEN dataset.
+This step preserves dosages. For each enabled group, PLINK runs one LD calculation
+with an anchor list from the requested `variant_a` IDs.
+The script reads the report in sequence and retains only the exact requested pairs.
+Input order, duplicates, and reversed pairs remain in the output.
+
+For pairs on the same chromosome, the distance limit covers the largest requested
+distance, rounded up to a positive whole number of kilobases.
+PLINK can report additional nearby pairs; the script discards them.
+If any eligible pair spans chromosomes, the batch uses `inter-chr` and no distance
+limit. This also retains distant pairs on the same chromosome in a mixed request.
+In both cases, the negative r² threshold retains zero, low, and undefined LD values.
+The task removes each temporary LD report after reading it. The logs remain in the
+exported archive. Cross-chromosome batches can produce many extra comparisons;
+increase `extra_disk_gb` if one report needs more task storage.
 
 Every sample in the PSAM contributes to the full-cohort group.
 The task creates a temporary PSAM without parent columns to include samples with known parents.
@@ -108,8 +119,12 @@ The `.github` workflows use paths relative to the repository root.
 `wdl-validation.yml` checks WDL syntax, workflow-scope file creation, and command-time localization and quoting.
 It also checks two input error cases. It builds no image.
 
-`docker-image.yml` builds the Linux image and runs one tiny synthetic LD example, plus the same two input checks.
-The example has 120 samples and four variants. It tests dosages, population selection, missing variants, monomorphic variants, reversed pairs, distant pairs, and cross-chromosome pairs.
+`docker-image.yml` builds the Linux image and runs the synthetic LD regressions and input checks.
+The tests use small synthetic genotype files. They test dosages, missing dosages,
+population selection, missing variants, monomorphic variants, indels, reversed and
+duplicate pairs, distant pairs, cross-chromosome pairs, and small sample groups.
+A regression test compares the batch results with real per-anchor PLINK calculations
+from the prior method. It also checks the PLINK logs for one LD run per enabled group.
 Automatic image builds run only when `scripts/pair_ld.py` changes.
 Use the manual workflow trigger after a Dockerfile or dependency change.
 After the checks pass on `main`, the action publishes the tested image to GitHub Container Registry.
