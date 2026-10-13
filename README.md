@@ -145,7 +145,8 @@ python -m unittest discover -s tests -v
 ```
 
 Local checks passed with PLINK `2.0.0-a.6.9` and miniwdl `1.14.2`.
-The [GitHub Actions image build](https://github.com/AoU-Multiomics-Analysis/AnalysisTools/actions/runs/38342246710) also passed all three small tests and published the container.
+The [GitHub Actions image build](https://github.com/AoU-Multiomics-Analysis/AnalysisTools/actions/runs/38347449373)
+passed all five tests and published the batched container pinned in `examples/inputs.json`.
 
 ## References
 
